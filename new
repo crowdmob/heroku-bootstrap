@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+# Run with path/to/heroku-bootstrap/new new-app-name
+
+name = ARGV[0]
+
+"rails new #{name}"
+"cd #{name}"
+
+"gem 'delayed_job_active_record'"
+"gem 'exception_notification'"
+"gem 'sqlite3', :group => [:development, :test]"
+"gem 'pg', :group => :production"
+
+"bundle install"
+
+"rails generate delayed_job:active_record"
+"rake db:migrate"
+
+"git init"
+"git commit -am 'initial commit'"
+"heroku create #{name} --stack cedar"
+"git push heroku master"
+"heroku run rake db:migate"
+
+'heroku addons:add sendgrid:starter'
+'heroku addons:add scheduler:standard'
+
+
+# Add Job to Scheduler: rake jobs:work
