@@ -25,5 +25,14 @@ name = ARGV[0]
 'heroku addons:add sendgrid:starter'
 'heroku addons:add scheduler:standard'
 
+# Add this file
+'touch lib/tasks/scheduler.rake'
+'desc "This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks."'
+'task :run_delayed_worker => :environment do'
+'    puts "Starting run_delayed_worker..."'
+'    Delayed::Worker.new.work_off(20)'
+'    puts "done with run_delayed_worker."'
+'end'
 
-# Add Job to Scheduler: rake jobs:work
+
+# Add Job to Scheduler: rake run_delayed_worker (every 10 minutes)
