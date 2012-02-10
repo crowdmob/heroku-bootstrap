@@ -48,3 +48,4 @@ ActionMailer::Base.smtp_settings = {
 ActionMailer::Base.delivery_method = :smtp
 
 # Add Job to Scheduler: rake run_delayed_worker (every 10 minutes)
+'heroku addons:open scheduler'
