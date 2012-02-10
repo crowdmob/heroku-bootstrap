@@ -17,10 +17,11 @@ name = ARGV[0]
 "rake db:migrate"
 
 "git init"
+"git add ."
 "git commit -am 'initial commit'"
 "heroku create #{name} --stack cedar"
 "git push heroku master"
-"heroku run rake db:migate"
+"heroku run rake db:migrate"
 
 'heroku addons:add sendgrid:starter'
 'heroku addons:add scheduler:standard'
@@ -34,5 +35,16 @@ name = ARGV[0]
 '    puts "done with run_delayed_worker."'
 'end'
 
+# Add this file
+'touch config/initializers/mail.rb'
+ActionMailer::Base.smtp_settings = {
+  :address        => 'smtp.sendgrid.net',
+  :port           => '587',
+  :authentication => :plain,
+  :user_name      => ENV['SENDGRID_USERNAME'],
+  :password       => ENV['SENDGRID_PASSWORD'],
+  :domain         => 'heroku.com'
+}
+ActionMailer::Base.delivery_method = :smtp
 
 # Add Job to Scheduler: rake run_delayed_worker (every 10 minutes)
