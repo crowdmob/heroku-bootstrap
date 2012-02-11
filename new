@@ -50,4 +50,4 @@ ActionMailer::Base.delivery_method = :smtp
 # Add Job to Scheduler: rake run_delayed_worker (every 10 minutes)
 'heroku addons:open scheduler'
 
-'heroku addons:add deployhooks:campfire url=exampleurl ssl=1 api_key=exampleapikey room=Example\ Room message="{{user}} deployed #{name}"'
+'heroku addons:add deployhooks:campfire url=exampleurl ssl=1 api_key=exampleapikey room=Example\ Room message="[Heroku] {{user}} deployed {{head}} to {{app}} {{url}}"'
