@@ -3,40 +3,57 @@
 
 name = ARGV[0]
 
-"rails new #{name}"
-"cd #{name}"
+rails new #{name}
+cd #{name}
 
-"gem 'delayed_job_active_record'"
-"gem 'exception_notification'"
-"gem 'sqlite3', :group => [:development, :test]"
-"gem 'pg', :group => :production"
+gem 'delayed_job_active_record'
+gem 'exception_notification'
+gem 'sqlite3', :group => [:development, :test]
+gem 'pg', :group => :production
+gem "asset_sync"
 
-"bundle install"
+bundle install
 
-"rails generate delayed_job:active_record"
-"rake db:migrate"
+rails generate delayed_job:active_record
+rake db:migrate
 
-"git init"
-"git add ."
-"git commit -am 'initial commit'"
-"heroku create #{name} --stack cedar"
-"git push heroku master"
-"heroku run rake db:migrate"
+git init
+git add .
+git commit -am 'initial commit'
+heroku create #{name} --stack cedar
+git push heroku master
+heroku run rake db:migrate
 
-'heroku addons:add sendgrid:starter'
-'heroku addons:add scheduler:standard'
+heroku config:add FOG_PROVIDER=AWS AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=yyy
+heroku config:add FOG_DIRECTORY=#{name}-assets
+
+# add this to config/production.rb
+config.action_controller.asset_host = Proc.new do |source, request = nil|
+  method = "http"
+  unless request.nil?
+    method = request.ssl? ? "https" : "http"
+  end
+  "#{method}://ZZZ.cloudfront.net"
+end
+
+heroku run rake assets:precompile
+
+heroku addons:add sendgrid:starter
+heroku addons:add scheduler:standard
+
+
 
 # Add this file
-'touch lib/tasks/scheduler.rake'
-'desc "This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks."'
-'task :run_delayed_worker => :environment do'
-'    puts "Starting run_delayed_worker..."'
-'    Delayed::Worker.new.work_off(20)'
-'    puts "done with run_delayed_worker."'
-'end'
+touch lib/tasks/scheduler.rake
+desc "This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks."
+task :run_delayed_worker => :environment do
+    puts "Starting run_delayed_worker..."
+    Delayed::Worker.new.work_off(20)
+    puts "done with run_delayed_worker."
+end
 
 # Add this file
-'touch config/initializers/mail.rb'
+touch config/initializers/mail.rb
 ActionMailer::Base.smtp_settings = {
   :address        => 'smtp.sendgrid.net',
   :port           => '587',
@@ -48,6 +65,5 @@ ActionMailer::Base.smtp_settings = {
 ActionMailer::Base.delivery_method = :smtp
 
 # Add Job to Scheduler: rake run_delayed_worker (every 10 minutes)
-'heroku addons:open scheduler'
-
-'heroku addons:add deployhooks:campfire url=exampleurl ssl=1 api_key=exampleapikey room=Example\ Room message="[Heroku] {{user}} deployed {{head}} to {{app}} {{url}}"'
+heroku addons:open scheduler
+heroku addons:add deployhooks:campfire
