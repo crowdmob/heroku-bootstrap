@@ -17,6 +17,29 @@ bundle install
 rails generate delayed_job:active_record
 rake db:migrate
 
+
+# Add this file
+touch lib/tasks/scheduler.rake
+desc "This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks."
+task :run_delayed_worker => :environment do
+    puts "Starting run_delayed_worker..."
+    Delayed::Worker.new.work_off(20)
+    puts "done with run_delayed_worker."
+end
+
+# Add this file
+touch config/initializers/mail.rb
+ActionMailer::Base.smtp_settings = {
+  :address        => 'smtp.sendgrid.net',
+  :port           => '587',
+  :authentication => :plain,
+  :user_name      => ENV['SENDGRID_USERNAME'],
+  :password       => ENV['SENDGRID_PASSWORD'],
+  :domain         => 'heroku.com'
+}
+ActionMailer::Base.delivery_method = :smtp
+
+
 git init
 git add .
 git commit -am 'initial commit'
@@ -40,30 +63,8 @@ heroku run rake assets:precompile
 
 heroku addons:add sendgrid:starter
 heroku addons:add scheduler:standard
+heroku addons:add deployhooks:campfire
 
-
-
-# Add this file
-touch lib/tasks/scheduler.rake
-desc "This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks."
-task :run_delayed_worker => :environment do
-    puts "Starting run_delayed_worker..."
-    Delayed::Worker.new.work_off(20)
-    puts "done with run_delayed_worker."
-end
-
-# Add this file
-touch config/initializers/mail.rb
-ActionMailer::Base.smtp_settings = {
-  :address        => 'smtp.sendgrid.net',
-  :port           => '587',
-  :authentication => :plain,
-  :user_name      => ENV['SENDGRID_USERNAME'],
-  :password       => ENV['SENDGRID_PASSWORD'],
-  :domain         => 'heroku.com'
-}
-ActionMailer::Base.delivery_method = :smtp
 
 # Add Job to Scheduler: rake run_delayed_worker (every 10 minutes)
 heroku addons:open scheduler
-heroku addons:add deployhooks:campfire
