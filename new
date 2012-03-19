@@ -10,6 +10,8 @@ gem 'delayed_job_active_record'
 gem 'exception_notification'
 gem 'sqlite3', :group => [:development, :test]
 gem 'pg', :group => :production
+gem 'default_value_for'
+
 gem "asset_sync"
 
 bundle install
@@ -22,9 +24,9 @@ rake db:migrate
 touch lib/tasks/scheduler.rake
 desc "This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks."
 task :run_delayed_worker => :environment do
-    puts "Starting run_delayed_worker..."
-    Delayed::Worker.new.work_off(20)
-    puts "done with run_delayed_worker."
+  puts "Starting run_delayed_worker..."
+  Delayed::Worker.new.work_off(20)
+  puts "done with run_delayed_worker."
 end
 
 # Add this file
@@ -59,7 +61,7 @@ config.action_controller.asset_host = Proc.new do |source, request = nil|
   "#{method}://ZZZ.cloudfront.net"
 end
 
-heroku run rake assets:precompile
+# heroku run rake assets:precompile ### doesn't seem needed
 
 heroku addons:add sendgrid:starter
 heroku addons:add scheduler:standard
