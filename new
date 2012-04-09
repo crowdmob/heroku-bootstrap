@@ -74,3 +74,4 @@ heroku addons:open scheduler
 # Add collaborators
 heroku sharing:add matt@crowdmob.com
 heroku sharing:add rohen@crowdmob.com
+heroku sharing:add raj@crowdmob.com
