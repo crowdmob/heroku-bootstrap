@@ -52,7 +52,7 @@ heroku run rake db:migrate
 heroku config:add FOG_PROVIDER=AWS AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=yyy
 heroku config:add FOG_DIRECTORY=#{name}-assets
 
-# add this to config/production.rb
+# add this to config/environments/production.rb
 config.action_controller.asset_host = Proc.new do |source, request = nil|
   method = "http"
   unless request.nil?
