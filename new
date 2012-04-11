@@ -75,3 +75,7 @@ heroku addons:open scheduler
 heroku sharing:add matt@crowdmob.com
 heroku sharing:add rohen@crowdmob.com
 heroku sharing:add raj@crowdmob.com
+
+# Turn on pre-compilation, see https://devcenter.heroku.com/articles/labs-user-env-compile
+heroku labs:enable user_env_compile -a #{name}
+
