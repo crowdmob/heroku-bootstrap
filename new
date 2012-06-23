@@ -1,6 +1,9 @@
 # Run with > ruby path/to/heroku-bootstrap/new
 # This will ask you a lot of questions to get your app going!
 
+require 'simple_aws/s3'
+require 'simple_aws/cloud_front'
+
 DEFAULTS = {
   :collaborators => "matt@crowdmob.com rohen@crowdmob.com raj@crowdmob.com",
   :project_directory => '~/Projects',
@@ -28,6 +31,11 @@ def camelize(lower_case_and_underscored_word, first_letter_in_uppercase = true)
     lower_case_and_underscored_word.first + camelize(lower_case_and_underscored_word)[1..-1]
   end
 end
+
+def cloudfront_creation_xml(s3bucket)
+  "<DistributionConfig xmlns=\"http://cloudfront.amazonaws.com/doc/2012-05-05/\"><CallerReference>herokubootstrap-#{Time.now}</CallerReference><Aliases><Quantity>0</Quantity></Aliases><DefaultRootObject/><Origins><Quantity>1</Quantity><Items><Origin><Id>herokubootstrap-#{s3bucket}-origin</Id><DomainName>#{s3bucket}.s3.amazonaws.com</DomainName><S3OriginConfig/></Origin></Items></Origins><DefaultCacheBehavior><TargetOriginId>herokubootstrap-#{s3bucket}-origin</TargetOriginId><ForwardedValues><QueryString>true</QueryString></ForwardedValues><TrustedSigners><Enabled>false</Enabled><Quantity>0</Quantity><ViewerProtocolPolicy>allow-all</ViewerProtocolPolicy><MinTTL>3600</MinTTL></DefaultCacheBehavior><CacheBehaviors><Quantity>0</Quantity><Comment/><Logging><Enabled>false</Enabled></Logging><Enabled>true</Enabled><DistributionConfig>"
+end
+
 
 def exec_with_status(cmd)
   puts "- `rvm use #{inputs[:rvm]}; #{cmd}`"
@@ -66,7 +74,7 @@ if inputs[:enable_asset_pipeline]
   inputs[:s3_assets_bucket] = optionally(:s3_assets_bucket, "What is your PRODUCTION Assets S3 Bucket Name")
   inputs[:aws_key] = requirement("What is your PRODUCTION AWS Public Key")
   inputs[:aws_secret] = requirement("What is your PRODUCTION AWS Secret Key")
-  inputs[:cloudfront_subdomain] = requirement("What is your PRODUCTION CloudFront Subdomain")
+  # inputs[:cloudfront_subdomain] = requirement("What is your PRODUCTION CloudFront Subdomain")
 end
 
 # Staging Environment Settings
@@ -80,7 +88,7 @@ if inputs[:enable_asset_pipeline]
   inputs[:aws_key_staging] = optionally(:aws_key_staging, "What is your STAGING AWS Public Key")
   DEFAULTS[:aws_secret_staging] = inputs[:aws_secret]
   inputs[:aws_secret_staging] = optionally(:aws_secret_staging, "What is your SECRET AWS Secret Key")
-  inputs[:cloudfront_subdomain_staging] = requirement("What is your STAGING CloudFront Subdomain")
+  # inputs[:cloudfront_subdomain_staging] = requirement("What is your STAGING CloudFront Subdomain")
 end
 
 inputs[:collaborators] = optionally(:collaborators, "Collaborator email addresses space delimited").split(' ')
@@ -175,6 +183,30 @@ if using_asset_pipeline
     exec_with_status("echo \"end\" >> #{project_path}/config/environments/staging.rb")
   end
 end
+
+# Create buckets and cloudfronts
+
+if using_asset_pipeline
+  s3 = SimpleAWS::S3.new inputs[:aws_key], inputs[:aws_secret]
+  cloudfront = SimpleAWS::CloudFront.new inputs[:aws_key], inputs[:aws_secret]
+  puts "- Creating production s3 bucket `#{inputs[:s3_assets_bucket]}`"
+  s3.put "/", :bucket => inputs[:s3_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
+  distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_assets_bucket])
+  inputs[:cloudfront_subdomain] = distribution.domain_name
+  puts "- Cloudfront distribution created `#{inputs[:cloudfront_subdomain]}`"
+  
+  if inputs[:create_staging_heroku_app]
+    s3 = SimpleAWS::S3.new inputs[:aws_key_staging], inputs[:aws_secret_staging]
+    cloudfront = SimpleAWS::CloudFront.new inputs[:aws_key_staging], inputs[:aws_secret_staging]
+    puts "- Creating staging s3 bucket `#{inputs[:s3_staging_assets_bucket]}`"
+    s3.put "/", :bucket => inputs[:s3_staging_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
+    puts "- Creating staging cloudfront distribution for `#{inputs[:s3_staging_assets_bucket]}`"
+    distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_staging_assets_bucket])
+    inputs[:cloudfront_subdomain_staging] = distribution.domain_name
+    puts "- Cloudfront distribution created `#{inputs[:cloudfront_subdomain_staging]}`"
+  end
+end
+
 
 # Do the git dance
 exec_with_status("cd #{project_path}; git init")
