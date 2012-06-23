@@ -37,13 +37,13 @@ def cloudfront_creation_xml(s3bucket)
   "<DistributionConfig xmlns=\"http://cloudfront.amazonaws.com/doc/2012-05-05/\"><CallerReference>herokubootstrap-#{Time.now}</CallerReference><S3Origin><DNSName>#{s3bucket}.s3.amazonaws.com</DNSName></S3Origin><Aliases><Quantity>0</Quantity></Aliases><Comment/><Logging><Enabled>false</Enabled><Bucket>#{s3bucket}-logs-disabled.s3.amazonaws.com</Bucket><Prefix>#{s3bucket}.herokuapp.com</Prefix></Logging><TrustedSigners><Enabled>false</Enabled><Quantity>0</Quantity></TrustedSigners><Enabled>true</Enabled></DistributionConfig>"
 end
 
-def exec_with_status(cmd)
-  puts "- `rvm use #{inputs[:rvm]}; #{cmd}`"
-  `rvm use #{inputs[:rvm]}; #{cmd}`
+def exec_with_status(cmd, inputs_hash)
+  puts "- `rvm use #{inputs_hash[:rvm]}; #{cmd}`"
+  `rvm use #{inputs_hash[:rvm]}; #{cmd}`
 end
 
 def requirement(prompt)
-  print "* #{prompt}: "
+  print "+ #{prompt} ***: "
   input = STDIN.gets.strip
   if blank?(input)
     puts "  --- ERROR value required"
@@ -63,9 +63,9 @@ end
 puts "Welcome to heroku bootstrap.  We're going to ask you a few questions to make you a new rails application on heroku!"
 
 # Production Environment Settings
+inputs[:app_name] = requirement("What do you want your app to be named locally")
 inputs[:project_directory] = optionally(:project_directory, "Where do we put the project on your computer")
 inputs[:rvm] = optionally(:rvm, "Which version of rvm environment to use")
-inputs[:app_name] = requirement("What do you want your app to be named locally")
 DEFAULTS[:heroku_app_name] = inputs[:app_name]
 inputs[:heroku_app_name] = optionally(:heroku_app_name, "What do you want to name your HEROKU app")
 inputs[:enable_asset_pipeline] = true_string? optionally(:enable_asset_pipeline, "Your app uses the asset pipeline with Amazon Cloudfront")
@@ -91,94 +91,94 @@ end
 
 inputs[:collaborators] = optionally(:collaborators, "Collaborator email addresses space delimited").split(' ')
 
-abort("The input was #{inputs.inspect}")
-
-
-
+puts "Great!  Creating an app with the following settings"
+puts "----------------------------------------------------"
+puts "#{inputs.inspect}"
+puts "----------------------------------------------------"
 
 # Create Rails App
-exec_with_status("cd #{inputs[:project_directory]}; rails new #{inputs[:app_name]}")
+exec_with_status("cd #{inputs[:project_directory]}; rails new #{inputs[:app_name]}", inputs)
 
 project_path = "#{inputs[:project_directory]}/#{inputs[:app_name]}"
 
 # Remove unecessary gem
-exec_with_status("sed -i \"/$gem\ \'sqlite3\'$/d\" #{project_path}/Gemfile")
+exec_with_status("sed -i \"/$gem\ \'sqlite3\'$/d\" #{project_path}/Gemfile", inputs)
 
 # Install necessary gems
-exec_with_status("echo \"\" >> #{project_path}/Gemfile") # newline
-exec_with_status("echo \"gem 'delayed_job_active_record'\" >> #{project_path}/Gemfile")
-exec_with_status("echo \"gem 'exception_notification'\" >> #{project_path}/Gemfile")
-exec_with_status("echo \"gem 'sqlite3', :group => [:development, :test]\" >> #{project_path}/Gemfile")
-exec_with_status("echo \"gem 'pg', :group => [:production, :staging]\" >> #{project_path}/Gemfile")
-exec_with_status("echo \"gem 'default_value_for'\" >> #{project_path}/Gemfile")
-exec_with_status("echo \"gem 'oink'\" >> #{project_path}/Gemfile")
-exec_with_status("echo \"gem 'newrelic_rpm'\" >> #{project_path}/Gemfile")
-exec_with_status("echo \"\" >> #{project_path}/Gemfile") # newline
+exec_with_status("echo \"\" >> #{project_path}/Gemfile", inputs) # newline
+exec_with_status("echo \"gem 'delayed_job_active_record'\" >> #{project_path}/Gemfile", inputs)
+exec_with_status("echo \"gem 'exception_notification'\" >> #{project_path}/Gemfile", inputs)
+exec_with_status("echo \"gem 'sqlite3', :group => [:development, :test]\" >> #{project_path}/Gemfile", inputs)
+exec_with_status("echo \"gem 'pg', :group => [:production, :staging]\" >> #{project_path}/Gemfile", inputs)
+exec_with_status("echo \"gem 'default_value_for'\" >> #{project_path}/Gemfile", inputs)
+exec_with_status("echo \"gem 'oink'\" >> #{project_path}/Gemfile", inputs)
+exec_with_status("echo \"gem 'newrelic_rpm'\" >> #{project_path}/Gemfile", inputs)
+exec_with_status("echo \"\" >> #{project_path}/Gemfile", inputs) # newline
 
 if using_asset_pipeline
-  exec_with_status("echo \"gem 'asset_sync'\" >> #{project_path}/Gemfile")
+  exec_with_status("echo \"gem 'asset_sync'\" >> #{project_path}/Gemfile", inputs)
 end
 
 # Run bundle install to get 'em all
-exec_with_status("cd #{project_path}; bundle install")
+exec_with_status("cd #{project_path}; bundle install", inputs)
 
 # Migrate for active record
-exec_with_status("cd #{project_path}; rails generate delayed_job:active_record")
-exec_with_status("cd #{project_path}; rake db:migrate")
+exec_with_status("cd #{project_path}; rails generate delayed_job:active_record", inputs)
+exec_with_status("cd #{project_path}; rake db:migrate", inputs)
 
 # Get a cheap version of delayed worker running
-exec_with_status("touch #{project_path}/lib/tasks/scheduler.rake")
-exec_with_status("echo \"desc 'This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks.'\" >> #{project_path}/lib/tasks/scheduler.rake")
-exec_with_status("echo \"task :run_delayed_worker => :environment do\" >> #{project_path}/lib/tasks/scheduler.rake")
-exec_with_status("echo \"  puts 'Starting run_delayed_worker...'\" >> #{project_path}/lib/tasks/scheduler.rake")
-exec_with_status("echo \"  Delayed::Worker.new.work_off(20)\" >> #{project_path}/lib/tasks/scheduler.rake")
-exec_with_status("echo \"  puts 'done with run_delayed_worker.'\" >> #{project_path}/lib/tasks/scheduler.rake")
-exec_with_status("echo \"end\" >> #{project_path}/lib/tasks/scheduler.rake")
+exec_with_status("touch #{project_path}/lib/tasks/scheduler.rake", inputs)
+exec_with_status("echo \"desc 'This task is called by the Heroku scheduler add-on and runs the background worker.  Ok for low priority backgrounded tasks.'\" >> #{project_path}/lib/tasks/scheduler.rake", inputs)
+exec_with_status("echo \"task :run_delayed_worker => :environment do\" >> #{project_path}/lib/tasks/scheduler.rake", inputs)
+exec_with_status("echo \"  puts 'Starting run_delayed_worker...'\" >> #{project_path}/lib/tasks/scheduler.rake", inputs)
+exec_with_status("echo \"  Delayed::Worker.new.work_off(20)\" >> #{project_path}/lib/tasks/scheduler.rake", inputs)
+exec_with_status("echo \"  puts 'done with run_delayed_worker.'\" >> #{project_path}/lib/tasks/scheduler.rake", inputs)
+exec_with_status("echo \"end\" >> #{project_path}/lib/tasks/scheduler.rake", inputs)
 
 # Get a free version of Newrelic enabled
-exec_with_status("curl #{DEFAULTS[:newrelic_yml_address]} > #{project_path}/config/newrelic.yml")
+exec_with_status("curl #{DEFAULTS[:newrelic_yml_address]} > #{project_path}/config/newrelic.yml", inputs)
 
 # Set up us the bomb for sendgrid
-exec_with_status("touch #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"ActionMailer::Base.smtp_settings = {\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"  :address        => 'smtp.sendgrid.net',\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"  :port           => '587',\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"  :authentication => :plain,\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"  :user_name      => ENV['SENDGRID_USERNAME'],\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"  :password       => ENV['SENDGRID_PASSWORD'],\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"  :domain         => 'heroku.com'\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"}\" >> #{project_path}/config/initializers/mail.rb")
-exec_with_status("echo \"ActionMailer::Base.delivery_method = :smtp\" >> #{project_path}/config/initializers/mail.rb")
+exec_with_status("touch #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"ActionMailer::Base.smtp_settings = {\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"  :address        => 'smtp.sendgrid.net',\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"  :port           => '587',\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"  :authentication => :plain,\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"  :user_name      => ENV['SENDGRID_USERNAME'],\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"  :password       => ENV['SENDGRID_PASSWORD'],\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"  :domain         => 'heroku.com'\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"}\" >> #{project_path}/config/initializers/mail.rb", inputs)
+exec_with_status("echo \"ActionMailer::Base.delivery_method = :smtp\" >> #{project_path}/config/initializers/mail.rb", inputs)
 
 # Set up us the bomb for oink
-exec_with_status("touch #{project_path}/config/initializers/oink.rb")
-exec_with_status("echo \"#{camelize(inputs[:app_name])}::Application.middleware.use( Oink::Middleware, :logger => Rails.logger )\" >> #{project_path}/config/initializers/oink.rb")
+exec_with_status("touch #{project_path}/config/initializers/oink.rb", inputs)
+exec_with_status("echo \"#{camelize(inputs[:app_name])}::Application.middleware.use( Oink::Middleware, :logger => Rails.logger )\" >> #{project_path}/config/initializers/oink.rb", inputs)
 
 # Set up staging environment rb
 if inputs[:create_staging_heroku_app]
-  exec_with_status("cp #{project_path}/config/environments/production.rb #{project_path}/config/environments/staging.rb")
+  exec_with_status("cp #{project_path}/config/environments/production.rb #{project_path}/config/environments/staging.rb", inputs)
 end
 
 # Asset hosting if requested
 if using_asset_pipeline
-  exec_with_status("echo \"\" >> #{project_path}/config/environments/production.rb") # newline
-  exec_with_status("echo \"config.action_controller.asset_host = Proc.new do |source, request = nil|\" >> #{project_path}/config/environments/production.rb")
-  exec_with_status("echo \"  method = 'http'\" >> #{project_path}/config/environments/production.rb")
-  exec_with_status("echo \"  unless request.nil?\" >> #{project_path}/config/environments/production.rb")
-  exec_with_status("echo \"    method = request.ssl? ? 'https' : 'http'\" >> #{project_path}/config/environments/production.rb")
-  exec_with_status("echo \"  end\" >> #{project_path}/config/environments/production.rb")
-  exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_domain]}\\\"\" >> #{project_path}/config/environments/production.rb")
-  exec_with_status("echo \"end\" >> #{project_path}/config/environments/production.rb")
+  exec_with_status("echo \"\" >> #{project_path}/config/environments/production.rb", inputs) # newline
+  exec_with_status("echo \"config.action_controller.asset_host = Proc.new do |source, request = nil|\" >> #{project_path}/config/environments/production.rb", inputs)
+  exec_with_status("echo \"  method = 'http'\" >> #{project_path}/config/environments/production.rb", inputs)
+  exec_with_status("echo \"  unless request.nil?\" >> #{project_path}/config/environments/production.rb", inputs)
+  exec_with_status("echo \"    method = request.ssl? ? 'https' : 'http'\" >> #{project_path}/config/environments/production.rb", inputs)
+  exec_with_status("echo \"  end\" >> #{project_path}/config/environments/production.rb", inputs)
+  exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_domain]}\\\"\" >> #{project_path}/config/environments/production.rb", inputs)
+  exec_with_status("echo \"end\" >> #{project_path}/config/environments/production.rb", inputs)
 
   if inputs[:create_staging_heroku_app]
-    exec_with_status("echo \"\" >> #{project_path}/config/environments/staging.rb") # newline
-    exec_with_status("echo \"config.action_controller.asset_host = Proc.new do |source, request = nil|\" >> #{project_path}/config/environments/staging.rb")
-    exec_with_status("echo \"  method = 'http'\" >> #{project_path}/config/environments/staging.rb")
-    exec_with_status("echo \"  unless request.nil?\" >> #{project_path}/config/environments/staging.rb")
-    exec_with_status("echo \"    method = request.ssl? ? 'https' : 'http'\" >> #{project_path}/config/environments/staging.rb")
-    exec_with_status("echo \"  end\" >> #{project_path}/config/environments/staging.rb")
-    exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_domain_staging]}\\\"\" >> #{project_path}/config/environments/staging.rb")
-    exec_with_status("echo \"end\" >> #{project_path}/config/environments/staging.rb")
+    exec_with_status("echo \"\" >> #{project_path}/config/environments/staging.rb", inputs) # newline
+    exec_with_status("echo \"config.action_controller.asset_host = Proc.new do |source, request = nil|\" >> #{project_path}/config/environments/staging.rb", inputs)
+    exec_with_status("echo \"  method = 'http'\" >> #{project_path}/config/environments/staging.rb", inputs)
+    exec_with_status("echo \"  unless request.nil?\" >> #{project_path}/config/environments/staging.rb", inputs)
+    exec_with_status("echo \"    method = request.ssl? ? 'https' : 'http'\" >> #{project_path}/config/environments/staging.rb", inputs)
+    exec_with_status("echo \"  end\" >> #{project_path}/config/environments/staging.rb", inputs)
+    exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_domain_staging]}\\\"\" >> #{project_path}/config/environments/staging.rb", inputs)
+    exec_with_status("echo \"end\" >> #{project_path}/config/environments/staging.rb", inputs)
   end
 end
 
@@ -207,9 +207,9 @@ end
 
 
 # Do the git dance
-exec_with_status("cd #{project_path}; git init")
-exec_with_status("cd #{project_path}; git add .")
-exec_with_status("cd #{project_path}; git commit -am 'initial commit'")
+exec_with_status("cd #{project_path}; git init", inputs)
+exec_with_status("cd #{project_path}; git add .", inputs)
+exec_with_status("cd #{project_path}; git commit -am 'initial commit'", inputs)
 
 # Setup Heroku on production and optionally on staging
 current_heroku_app = inputs[:heroku_app_name]
@@ -221,36 +221,36 @@ end
 
 heroku_apps.each do |current_heroku_app|
   current_env = current_heroku_app == inputs[:heroku_staging_app_name] ? :staging : :production
-  exec_with_status("cd #{project_path}; heroku create #{current_heroku_app}")
+  exec_with_status("cd #{project_path}; heroku create #{current_heroku_app}", inputs)
   
   # Change heroku git remote to env.
-  exec_with_status("sed -i \"s/$\[remote\ \"heroku\"\]$/\[remote\ \"#{current_env}\"\]/g\" #{project_path}/.git/config")
+  exec_with_status("sed -i \"s/$\[remote\ \"heroku\"\]$/\[remote\ \"#{current_env}\"\]/g\" #{project_path}/.git/config", inputs)
   
-  exec_with_status("cd #{project_path}; git push #{current_env} master")
-  exec_with_status("cd #{project_path}; heroku run rake db:migrate -a #{current_heroku_app}")
+  exec_with_status("cd #{project_path}; git push #{current_env} master", inputs)
+  exec_with_status("cd #{project_path}; heroku run rake db:migrate -a #{current_heroku_app}", inputs)
 
   # Setup asset hosting with heroku app
   if inputs[:enable_asset_pipeline] && current_env == :staging
-    exec_with_status("cd #{project_path}; heroku config:add FOG_PROVIDER=AWS FOG_DIRECTORY=#{inputs[:s3_staging_assets_bucket]} AWS_ACCESS_KEY_ID=#{inputs[:aws_key_staging]} AWS_SECRET_ACCESS_KEY=#{inputs[:aws_secret_staging]} -a #{current_heroku_app}")
+    exec_with_status("cd #{project_path}; heroku config:add FOG_PROVIDER=AWS FOG_DIRECTORY=#{inputs[:s3_staging_assets_bucket]} AWS_ACCESS_KEY_ID=#{inputs[:aws_key_staging]} AWS_SECRET_ACCESS_KEY=#{inputs[:aws_secret_staging]} -a #{current_heroku_app}", inputs)
   elsif inputs[:enable_asset_pipeline] # production
-    exec_with_status("cd #{project_path}; heroku config:add FOG_PROVIDER=AWS FOG_DIRECTORY=#{inputs[:s3_assets_bucket]} AWS_ACCESS_KEY_ID=#{inputs[:aws_key]} AWS_SECRET_ACCESS_KEY=#{inputs[:aws_secret]} -a #{current_heroku_app}")
+    exec_with_status("cd #{project_path}; heroku config:add FOG_PROVIDER=AWS FOG_DIRECTORY=#{inputs[:s3_assets_bucket]} AWS_ACCESS_KEY_ID=#{inputs[:aws_key]} AWS_SECRET_ACCESS_KEY=#{inputs[:aws_secret]} -a #{current_heroku_app}", inputs)
   end
 
   # Now for some heroku setup for sick add-ons :)
-  exec_with_status("cd #{project_path}; heroku addons:add sendgrid:starter -a #{current_heroku_app}")
-  exec_with_status("cd #{project_path}; heroku addons:add scheduler:standard -a #{current_heroku_app}")
-  exec_with_status("cd #{project_path}; heroku addons:add deployhooks:campfire -a #{current_heroku_app}")
-  exec_with_status("cd #{project_path}; heroku addons:add papertrail:test -a #{current_heroku_app}")
-  exec_with_status("cd #{project_path}; heroku addons:add newrelic:standard -a #{current_heroku_app}")
+  exec_with_status("cd #{project_path}; heroku addons:add sendgrid:starter -a #{current_heroku_app}", inputs)
+  exec_with_status("cd #{project_path}; heroku addons:add scheduler:standard -a #{current_heroku_app}", inputs)
+  exec_with_status("cd #{project_path}; heroku addons:add deployhooks:campfire -a #{current_heroku_app}", inputs)
+  exec_with_status("cd #{project_path}; heroku addons:add papertrail:test -a #{current_heroku_app}", inputs)
+  exec_with_status("cd #{project_path}; heroku addons:add newrelic:standard -a #{current_heroku_app}", inputs)
 
   # Setup pre-compilation in heroku labs, see https://devcenter.heroku.com/articles/labs-user-env-compile
   if using_asset_pipeline
-    exec_with_status("cd #{project_path}; heroku labs:enable user_env_compile -a #{current_heroku_app}")
+    exec_with_status("cd #{project_path}; heroku labs:enable user_env_compile -a #{current_heroku_app}", inputs)
   end
 
   # Add collaborators
   inputs[:collaborators].each do |email|
-    exec_with_status("cd #{project_path}; heroku sharing:add #{email} -a #{current_heroku_app}")
+    exec_with_status("cd #{project_path}; heroku sharing:add #{email} -a #{current_heroku_app}", inputs)
   end
 
   puts "We created heroku app `#{current_heroku_app}`.\n"
