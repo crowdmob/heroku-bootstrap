@@ -1,6 +1,6 @@
 # Run with > ruby path/to/heroku-bootstrap/new
 # This will ask you a lot of questions to get your app going!
-
+require 'rubygems'
 require 'simple_aws/s3'
 require 'simple_aws/cloud_front'
 
