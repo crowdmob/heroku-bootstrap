@@ -10,7 +10,9 @@ DEFAULTS = {
   :rvm => '1.9.3-head',
   :enable_asset_pipeline => 'true',
   :create_staging_heroku_app => 'true',
-  :newrelic_yml_address => 'https://raw.github.com/gist/2253296/newrelic.yml'
+  :newrelic_yml_address => 'https://raw.github.com/gist/2253296/newrelic.yml',
+  :exception_sender_address => 'notifications@crowdmob.com',
+  :exception_recipient_address => 'developers@crowdmob.com'
 }
 
 inputs = {}
@@ -91,6 +93,8 @@ if inputs[:enable_asset_pipeline]
 end
 
 inputs[:collaborators] = optionally(:collaborators, "Collaborator email addresses space delimited").split(' ')
+inputs[:exception_sender_address] = optionally(:exception_sender_address, "Send exception notifications from")
+inputs[:exception_recipient_address] = optionally(:exception_recipient_address, "Send exception notifications to")
 
 puts "Great!  Creating an app with the following settings"
 puts "----------------------------------------------------"
@@ -150,6 +154,10 @@ exec_with_status("echo \"  :password       => ENV['SENDGRID_PASSWORD'],\" >> #{p
 exec_with_status("echo \"  :domain         => 'heroku.com'\" >> #{project_path}/config/initializers/mail.rb", inputs)
 exec_with_status("echo \"}\" >> #{project_path}/config/initializers/mail.rb", inputs)
 exec_with_status("echo \"ActionMailer::Base.delivery_method = :smtp\" >> #{project_path}/config/initializers/mail.rb", inputs)
+
+# Set up us the bomb for exception_notifier
+exec_with_status("touch #{project_path}/config/initializers/exception_notification.rb", inputs)
+exec_with_status("echo \"#{camelize(inputs[:app_name])}::Application.config.middleware.use ExceptionNotifier, :email_prefix => '[#{inputs[:app_name]}] ', :sender_address => %{#{inputs[:exception_sender_address]}}, :exception_recipients => %w{#{inputs[:exception_recipient_address]}}\" >> #{project_path}/config/initializers/exception_notification.rb", inputs)
 
 # Set up us the bomb for oink
 exec_with_status("touch #{project_path}/config/initializers/oink.rb", inputs)
