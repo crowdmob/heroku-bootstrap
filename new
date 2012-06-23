@@ -47,7 +47,7 @@ def requirement(prompt)
   input = STDIN.gets.strip
   if blank?(input)
     puts "  --- ERROR value required"
-    return requirement(symb, prompt)
+    return requirement(prompt)
   else
     return input
   end
