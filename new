@@ -193,7 +193,7 @@ heroku_apps.each do |current_heroku_app|
   current_env = current_heroku_app == inputs[:heroku_staging_app_name] ? :staging : :production
   exec_with_status("cd #{project_path}; heroku create #{current_heroku_app}")
   
-  # Remove unecessary gem
+  # Change heroku git remote to env.
   exec_with_status("sed -i \"s/$\[remote\ \"heroku\"\]$/\[remote\ \"#{current_env}\"\]/g\" #{project_path}/.git/config")
   
   exec_with_status("cd #{project_path}; git push #{current_env} master")
