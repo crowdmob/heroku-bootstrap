@@ -102,7 +102,7 @@ exec_with_status("cd #{inputs[:project_directory]}; rails new #{inputs[:app_name
 project_path = "#{inputs[:project_directory]}/#{inputs[:app_name]}"
 
 # Remove unecessary gem
-exec_with_status("sed -i \"/^gem\\ \\'sqlite3\\'$/d\" #{project_path}/Gemfile", inputs)
+exec_with_status("sed -i \"\" \"/^gem\\ \\'sqlite3\\'$/d\" #{project_path}/Gemfile", inputs)
 
 # Install necessary gems
 exec_with_status("echo \"\" >> #{project_path}/Gemfile", inputs) # newline
@@ -224,7 +224,7 @@ heroku_apps.each do |current_heroku_app|
   exec_with_status("cd #{project_path}; heroku create #{current_heroku_app}", inputs)
   
   # Change heroku git remote to env.
-  exec_with_status("sed -i \"s/^\\[remote\\ \\\"heroku\\\"\\]$/\\[remote\\ \\\"#{current_env}\\\"\]/g\" #{project_path}/.git/config", inputs)
+  exec_with_status("sed -i \"\" \"s/^\\[remote\\ \\\"heroku\\\"\\]$/\\[remote\\ \\\"#{current_env}\\\"\]/g\" #{project_path}/.git/config", inputs)
   
   exec_with_status("cd #{project_path}; git push #{current_env} master", inputs)
   exec_with_status("cd #{project_path}; heroku run rake db:migrate -a #{current_heroku_app}", inputs)
