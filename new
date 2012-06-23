@@ -253,7 +253,7 @@ heroku_apps.each do |current_heroku_app|
     exec_with_status("cd #{project_path}; heroku sharing:add #{email} -a #{current_heroku_app}", inputs)
   end
 
-  puts "We created heroku app `#{current_heroku_app}`.\n"
+  puts "\n\nWe created heroku app `#{current_heroku_app}`.\n"
   puts "You still need to add the job to the scheduler plugin.  Run:"
   puts "$ heroku addons:open scheduler -a #{current_heroku_app}"
   puts "   And input: `rake run_delayed_worker`, and set it to run every 10 minutes.\n"
