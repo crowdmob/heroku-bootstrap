@@ -200,7 +200,7 @@ heroku_apps.each do |current_heroku_app|
   exec_with_status("cd #{project_path}; heroku run rake db:migrate -a #{current_heroku_app}")
 
   # Setup asset hosting with heroku app
-  if inputs[:enable_asset_pipeline] && current_heroku_app == inputs[:heroku_staging_app_name] # staging
+  if inputs[:enable_asset_pipeline] && current_env == :staging
     exec_with_status("cd #{project_path}; heroku config:add FOG_PROVIDER=AWS FOG_DIRECTORY=#{inputs[:s3_staging_assets_bucket]} AWS_ACCESS_KEY_ID=#{inputs[:aws_key_staging]} AWS_SECRET_ACCESS_KEY=#{inputs[:aws_secret_staging]} -a #{current_heroku_app}")
   elsif inputs[:enable_asset_pipeline] # production
     exec_with_status("cd #{project_path}; heroku config:add FOG_PROVIDER=AWS FOG_DIRECTORY=#{inputs[:s3_assets_bucket]} AWS_ACCESS_KEY_ID=#{inputs[:aws_key]} AWS_SECRET_ACCESS_KEY=#{inputs[:aws_secret]} -a #{current_heroku_app}")
