@@ -32,10 +32,10 @@ def camelize(lower_case_and_underscored_word, first_letter_in_uppercase = true)
   end
 end
 
-def cloudfront_creation_xml(s3bucket)
-  "<DistributionConfig xmlns=\"http://cloudfront.amazonaws.com/doc/2012-05-05/\"><CallerReference>herokubootstrap-#{Time.now}</CallerReference><Aliases><Quantity>0</Quantity></Aliases><DefaultRootObject/><Origins><Quantity>1</Quantity><Items><Origin><Id>herokubootstrap-#{s3bucket}-origin</Id><DomainName>#{s3bucket}.s3.amazonaws.com</DomainName><S3OriginConfig/></Origin></Items></Origins><DefaultCacheBehavior><TargetOriginId>herokubootstrap-#{s3bucket}-origin</TargetOriginId><ForwardedValues><QueryString>true</QueryString></ForwardedValues><TrustedSigners><Enabled>false</Enabled><Quantity>0</Quantity></TrustedSigners><ViewerProtocolPolicy>allow-all</ViewerProtocolPolicy><MinTTL>3600</MinTTL></DefaultCacheBehavior><CacheBehaviors><Quantity>0</Quantity></CacheBehaviors><Comment/><Logging><Enabled>false</Enabled></Logging><Enabled>true</Enabled></DistributionConfig>"
-end
 
+def cloudfront_creation_xml(s3bucket)
+  "<DistributionConfig xmlns=\"http://cloudfront.amazonaws.com/doc/2012-05-05/\"><CallerReference>herokubootstrap-#{Time.now}</CallerReference><S3Origin><DNSName>#{s3bucket}.s3.amazonaws.com</DNSName></S3Origin><Aliases><Quantity>0</Quantity></Aliases><Comment/><Logging><Enabled>false</Enabled><Bucket>#{s3bucket}-logs-disabled.s3.amazonaws.com</Bucket><Prefix>#{s3bucket}.herokuapp.com</Prefix></Logging><TrustedSigners><Enabled>false</Enabled><Quantity>0</Quantity></TrustedSigners><Enabled>true</Enabled></DistributionConfig>"
+end
 
 def exec_with_status(cmd)
   puts "- `rvm use #{inputs[:rvm]}; #{cmd}`"
@@ -74,7 +74,6 @@ if inputs[:enable_asset_pipeline]
   inputs[:s3_assets_bucket] = optionally(:s3_assets_bucket, "What is your PRODUCTION Assets S3 Bucket Name")
   inputs[:aws_key] = requirement("What is your PRODUCTION AWS Public Key")
   inputs[:aws_secret] = requirement("What is your PRODUCTION AWS Secret Key")
-  # inputs[:cloudfront_subdomain] = requirement("What is your PRODUCTION CloudFront Subdomain")
 end
 
 # Staging Environment Settings
@@ -88,7 +87,6 @@ if inputs[:enable_asset_pipeline]
   inputs[:aws_key_staging] = optionally(:aws_key_staging, "What is your STAGING AWS Public Key")
   DEFAULTS[:aws_secret_staging] = inputs[:aws_secret]
   inputs[:aws_secret_staging] = optionally(:aws_secret_staging, "What is your SECRET AWS Secret Key")
-  # inputs[:cloudfront_subdomain_staging] = requirement("What is your STAGING CloudFront Subdomain")
 end
 
 inputs[:collaborators] = optionally(:collaborators, "Collaborator email addresses space delimited").split(' ')
@@ -169,7 +167,7 @@ if using_asset_pipeline
   exec_with_status("echo \"  unless request.nil?\" >> #{project_path}/config/environments/production.rb")
   exec_with_status("echo \"    method = request.ssl? ? 'https' : 'http'\" >> #{project_path}/config/environments/production.rb")
   exec_with_status("echo \"  end\" >> #{project_path}/config/environments/production.rb")
-  exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_subdomain]}.cloudfront.net\\\"\" >> #{project_path}/config/environments/production.rb")
+  exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_domain]}\\\"\" >> #{project_path}/config/environments/production.rb")
   exec_with_status("echo \"end\" >> #{project_path}/config/environments/production.rb")
 
   if inputs[:create_staging_heroku_app]
@@ -179,7 +177,7 @@ if using_asset_pipeline
     exec_with_status("echo \"  unless request.nil?\" >> #{project_path}/config/environments/staging.rb")
     exec_with_status("echo \"    method = request.ssl? ? 'https' : 'http'\" >> #{project_path}/config/environments/staging.rb")
     exec_with_status("echo \"  end\" >> #{project_path}/config/environments/staging.rb")
-    exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_subdomain_staging]}.cloudfront.net\\\"\" >> #{project_path}/config/environments/staging.rb")
+    exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_domain_staging]}\\\"\" >> #{project_path}/config/environments/staging.rb")
     exec_with_status("echo \"end\" >> #{project_path}/config/environments/staging.rb")
   end
 end
@@ -192,8 +190,8 @@ if using_asset_pipeline
   puts "- Creating production s3 bucket `#{inputs[:s3_assets_bucket]}`"
   s3.put "/", :bucket => inputs[:s3_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
   distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_assets_bucket])
-  inputs[:cloudfront_subdomain] = distribution.domain_name
-  puts "- Cloudfront distribution created `#{inputs[:cloudfront_subdomain]}`"
+  inputs[:cloudfront_domain] = distribution.domain_name
+  puts "- Cloudfront distribution created `#{inputs[:cloudfront_domain]}`"
   
   if inputs[:create_staging_heroku_app]
     s3 = SimpleAWS::S3.new inputs[:aws_key_staging], inputs[:aws_secret_staging]
@@ -202,8 +200,8 @@ if using_asset_pipeline
     s3.put "/", :bucket => inputs[:s3_staging_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
     puts "- Creating staging cloudfront distribution for `#{inputs[:s3_staging_assets_bucket]}`"
     distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_staging_assets_bucket])
-    inputs[:cloudfront_subdomain_staging] = distribution.domain_name
-    puts "- Cloudfront distribution created `#{inputs[:cloudfront_subdomain_staging]}`"
+    inputs[:cloudfront_domain_staging] = distribution.domain_name
+    puts "- Cloudfront distribution created `#{inputs[:cloudfront_domain_staging]}`"
   end
 end
 
