@@ -1,7 +1,5 @@
 h1. Setup a new heroku app with the essentials!
 
-A work in progress.
+Run with:
 
-You'll eventually run with:
-
-<code>Run with path/to/heroku-bootstrap/new new-app-name</code>
+<code>Run with path/to/heroku-bootstrap/new</code>
