@@ -236,6 +236,11 @@ heroku_apps.each do |current_heroku_app|
     exec_with_status("cd #{project_path}; heroku config:add FOG_PROVIDER=AWS FOG_DIRECTORY=#{inputs[:s3_assets_bucket]} AWS_ACCESS_KEY_ID=#{inputs[:aws_key]} AWS_SECRET_ACCESS_KEY=#{inputs[:aws_secret]} -a #{current_heroku_app}", inputs)
   end
 
+  # Set the correct RAILS_ENV and RACK_ENV for staging
+  if current_env == :staging
+    exec_with_status("cd #{project_path}; heroku config:add RACK_ENV=staging RAILS_ENV=staging -a #{current_heroku_app}", inputs)
+  end
+
   # Now for some heroku setup for sick add-ons :)
   exec_with_status("cd #{project_path}; heroku addons:add sendgrid:starter -a #{current_heroku_app}", inputs)
   exec_with_status("cd #{project_path}; heroku addons:add scheduler:standard -a #{current_heroku_app}", inputs)
