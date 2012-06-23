@@ -102,7 +102,7 @@ exec_with_status("cd #{inputs[:project_directory]}; rails new #{inputs[:app_name
 project_path = "#{inputs[:project_directory]}/#{inputs[:app_name]}"
 
 # Remove unecessary gem
-exec_with_status("sed -i \"/$gem\ \'sqlite3\'$/d\" #{project_path}/Gemfile", inputs)
+exec_with_status("sed -i \"/^gem\\ \\'sqlite3\\'$/d\" #{project_path}/Gemfile", inputs)
 
 # Install necessary gems
 exec_with_status("echo \"\" >> #{project_path}/Gemfile", inputs) # newline
@@ -115,7 +115,7 @@ exec_with_status("echo \"gem 'oink'\" >> #{project_path}/Gemfile", inputs)
 exec_with_status("echo \"gem 'newrelic_rpm'\" >> #{project_path}/Gemfile", inputs)
 exec_with_status("echo \"\" >> #{project_path}/Gemfile", inputs) # newline
 
-if using_asset_pipeline
+if inputs[:enable_asset_pipeline]
   exec_with_status("echo \"gem 'asset_sync'\" >> #{project_path}/Gemfile", inputs)
 end
 
@@ -160,7 +160,7 @@ if inputs[:create_staging_heroku_app]
 end
 
 # Asset hosting if requested
-if using_asset_pipeline
+if inputs[:enable_asset_pipeline]
   exec_with_status("echo \"\" >> #{project_path}/config/environments/production.rb", inputs) # newline
   exec_with_status("echo \"config.action_controller.asset_host = Proc.new do |source, request = nil|\" >> #{project_path}/config/environments/production.rb", inputs)
   exec_with_status("echo \"  method = 'http'\" >> #{project_path}/config/environments/production.rb", inputs)
@@ -184,7 +184,7 @@ end
 
 # Create buckets and cloudfronts
 
-if using_asset_pipeline
+if inputs[:enable_asset_pipeline]
   s3 = SimpleAWS::S3.new inputs[:aws_key], inputs[:aws_secret]
   cloudfront = SimpleAWS::CloudFront.new inputs[:aws_key], inputs[:aws_secret]
   puts "- Creating production s3 bucket `#{inputs[:s3_assets_bucket]}`"
@@ -224,7 +224,7 @@ heroku_apps.each do |current_heroku_app|
   exec_with_status("cd #{project_path}; heroku create #{current_heroku_app}", inputs)
   
   # Change heroku git remote to env.
-  exec_with_status("sed -i \"s/$\[remote\ \"heroku\"\]$/\[remote\ \"#{current_env}\"\]/g\" #{project_path}/.git/config", inputs)
+  exec_with_status("sed -i \"s/^\\[remote\\ \\\"heroku\\\"\\]$/\\[remote\\ \\\"#{current_env}\\\"\]/g\" #{project_path}/.git/config", inputs)
   
   exec_with_status("cd #{project_path}; git push #{current_env} master", inputs)
   exec_with_status("cd #{project_path}; heroku run rake db:migrate -a #{current_heroku_app}", inputs)
@@ -244,7 +244,7 @@ heroku_apps.each do |current_heroku_app|
   exec_with_status("cd #{project_path}; heroku addons:add newrelic:standard -a #{current_heroku_app}", inputs)
 
   # Setup pre-compilation in heroku labs, see https://devcenter.heroku.com/articles/labs-user-env-compile
-  if using_asset_pipeline
+  if inputs[:enable_asset_pipeline]
     exec_with_status("cd #{project_path}; heroku labs:enable user_env_compile -a #{current_heroku_app}", inputs)
   end
 
