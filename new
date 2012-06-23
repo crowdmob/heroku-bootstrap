@@ -160,6 +160,28 @@ if inputs[:create_staging_heroku_app]
   exec_with_status("cp #{project_path}/config/environments/production.rb #{project_path}/config/environments/staging.rb", inputs)
 end
 
+# Create buckets and cloudfronts
+if inputs[:enable_asset_pipeline]
+  s3 = SimpleAWS::S3.new inputs[:aws_key], inputs[:aws_secret]
+  cloudfront = SimpleAWS::CloudFront.new inputs[:aws_key], inputs[:aws_secret]
+  puts "- Creating production s3 bucket `#{inputs[:s3_assets_bucket]}`"
+  s3.put "/", :bucket => inputs[:s3_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
+  distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_assets_bucket])
+  inputs[:cloudfront_domain] = distribution.domain_name
+  puts "- Cloudfront distribution created `#{inputs[:cloudfront_domain]}`"
+  
+  if inputs[:create_staging_heroku_app]
+    s3 = SimpleAWS::S3.new inputs[:aws_key_staging], inputs[:aws_secret_staging]
+    cloudfront = SimpleAWS::CloudFront.new inputs[:aws_key_staging], inputs[:aws_secret_staging]
+    puts "- Creating staging s3 bucket `#{inputs[:s3_staging_assets_bucket]}`"
+    s3.put "/", :bucket => inputs[:s3_staging_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
+    puts "- Creating staging cloudfront distribution for `#{inputs[:s3_staging_assets_bucket]}`"
+    distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_staging_assets_bucket])
+    inputs[:cloudfront_domain_staging] = distribution.domain_name
+    puts "- Cloudfront distribution created `#{inputs[:cloudfront_domain_staging]}`"
+  end
+end
+
 # Asset hosting if requested
 if inputs[:enable_asset_pipeline]
   exec_with_status("echo \"\" >> #{project_path}/config/environments/production.rb", inputs) # newline
@@ -180,29 +202,6 @@ if inputs[:enable_asset_pipeline]
     exec_with_status("echo \"  end\" >> #{project_path}/config/environments/staging.rb", inputs)
     exec_with_status("echo \"  \\\"\#{method}://#{inputs[:cloudfront_domain_staging]}\\\"\" >> #{project_path}/config/environments/staging.rb", inputs)
     exec_with_status("echo \"end\" >> #{project_path}/config/environments/staging.rb", inputs)
-  end
-end
-
-# Create buckets and cloudfronts
-
-if inputs[:enable_asset_pipeline]
-  s3 = SimpleAWS::S3.new inputs[:aws_key], inputs[:aws_secret]
-  cloudfront = SimpleAWS::CloudFront.new inputs[:aws_key], inputs[:aws_secret]
-  puts "- Creating production s3 bucket `#{inputs[:s3_assets_bucket]}`"
-  s3.put "/", :bucket => inputs[:s3_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
-  distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_assets_bucket])
-  inputs[:cloudfront_domain] = distribution.domain_name
-  puts "- Cloudfront distribution created `#{inputs[:cloudfront_domain]}`"
-  
-  if inputs[:create_staging_heroku_app]
-    s3 = SimpleAWS::S3.new inputs[:aws_key_staging], inputs[:aws_secret_staging]
-    cloudfront = SimpleAWS::CloudFront.new inputs[:aws_key_staging], inputs[:aws_secret_staging]
-    puts "- Creating staging s3 bucket `#{inputs[:s3_staging_assets_bucket]}`"
-    s3.put "/", :bucket => inputs[:s3_staging_assets_bucket], :headers => { "x-amz-acl" => "public-read" }
-    puts "- Creating staging cloudfront distribution for `#{inputs[:s3_staging_assets_bucket]}`"
-    distribution = cloudfront.post "/distribution", :body => cloudfront_creation_xml(inputs[:s3_staging_assets_bucket])
-    inputs[:cloudfront_domain_staging] = distribution.domain_name
-    puts "- Cloudfront distribution created `#{inputs[:cloudfront_domain_staging]}`"
   end
 end
 
