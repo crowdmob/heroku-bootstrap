@@ -2,4 +2,7 @@ h1. Setup a new heroku app with the essentials!
 
 Run with:
 
-<code>Run with path/to/heroku-bootstrap/new</code>
+<code>$ ruby path/to/heroku-bootstrap/new</code>
+
+And answer the questions to get a sick new rails app with heroku staging and production environments setup!
+
