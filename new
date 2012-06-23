@@ -25,6 +25,7 @@ def true_string?(str)
 end
 
 def camelize(lower_case_and_underscored_word, first_letter_in_uppercase = true)
+  lower_case_and_underscored_word = lower_case_and_underscored_word.gsub('-', '_') # Take care of dashes and treat as underscore
   if first_letter_in_uppercase
     lower_case_and_underscored_word.to_s.gsub(/\/(.?)/) { "::" + $1.upcase }.gsub(/(^|_)(.)/) { $2.upcase }
   else
