@@ -190,9 +190,14 @@ if inputs[:create_staging_heroku_app]
 end
 
 heroku_apps.each do |current_heroku_app|
+  current_env = current_heroku_app == inputs[:heroku_staging_app_name] ? :staging : :production
   exec_with_status("cd #{project_path}; heroku create #{current_heroku_app}")
-  exec_with_status("cd #{project_path}; git push heroku master")
-  exec_with_status("cd #{project_path}; heroku run rake db:migrate")
+  
+  # Remove unecessary gem
+  exec_with_status("sed -i \"s/$\[remote\ \"heroku\"\]$/\[remote\ \"#{current_env}\"\]/g\" #{project_path}/.git/config")
+  
+  exec_with_status("cd #{project_path}; git push #{current_env} master")
+  exec_with_status("cd #{project_path}; heroku run rake db:migrate -a #{current_heroku_app}")
 
   # Setup asset hosting with heroku app
   if inputs[:enable_asset_pipeline] && current_heroku_app == inputs[:heroku_staging_app_name] # staging
