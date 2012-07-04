@@ -159,6 +159,37 @@ exec_with_status("echo \"ActionMailer::Base.delivery_method = :smtp\" >> #{proje
 exec_with_status("touch #{project_path}/config/initializers/exception_notification.rb", inputs)
 exec_with_status("echo \"#{camelize(inputs[:app_name])}::Application.config.middleware.use ExceptionNotifier, :email_prefix => '[#{inputs[:app_name]}] ', :sender_address => %{#{inputs[:exception_sender_address]}}, :exception_recipients => %w{#{inputs[:exception_recipient_address]}}\" >> #{project_path}/config/initializers/exception_notification.rb", inputs)
 
+# Email out delayed_job errors
+exec_with_status("touch #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"\# Optional but recommended for less future surprises.\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"\# Fail at startup if method does not exist instead of in background job \" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"[[ExceptionNotifier::Notifier, :background_exception_notification]].each do |object, method_name|\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"  raise NoMethodError, \"undefined method `\#{method_name}' for \#{object.inspect}\" unless object.respond_to?(method_name, true)\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"end\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"\# Chain delayed job's handle_failed_job method to do exception notification\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"Delayed::Worker.class_eval do \" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"  def handle_failed_job_with_notification(job, error)\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"    handle_failed_job_without_notification(job, error)\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"    # only actually send mail in production\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"    if Rails.env.production?\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"      \# rescue if ExceptionNotifier fails for some reason\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"      begin\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"        ExceptionNotifier::Notifier.background_exception_notification(error)\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"      rescue Exception => e\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"        Rails.logger.error \"ExceptionNotifier failed: \#{e.class.name}: \#{e.message}\"\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"        e.backtrace.each do |f|\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"          Rails.logger.error \"  \#{f}\"\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"        end\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"        Rails.logger.flush\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"      end\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"    end\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"  end \" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"  alias_method_chain :handle_failed_job, :notification \" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+exec_with_status("echo \"end\" >> #{project_path}/config/initializers/delayed_job_exception_notification.rb", inputs)
+
+
+
 # Set up us the bomb for oink
 exec_with_status("touch #{project_path}/config/initializers/oink.rb", inputs)
 exec_with_status("echo \"#{camelize(inputs[:app_name])}::Application.middleware.use( Oink::Middleware, :logger => Rails.logger )\" >> #{project_path}/config/initializers/oink.rb", inputs)
