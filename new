@@ -81,15 +81,17 @@ end
 
 # Staging Environment Settings
 inputs[:create_staging_heroku_app] = true_string? optionally(:create_staging_heroku_app, "Make a staging environment and heroku app as well?")
-DEFAULTS[:heroku_staging_app_name] = "#{inputs[:heroku_app_name]}-staging"
-inputs[:heroku_staging_app_name] = optionally(:heroku_staging_app_name, "What do you want to name your STAGING HEROKU app")
-if inputs[:enable_asset_pipeline]
-  DEFAULTS[:s3_staging_assets_bucket] = "#{inputs[:heroku_staging_app_name]}-assets"
-  inputs[:s3_staging_assets_bucket] = optionally(:s3_staging_assets_bucket, "What is your STAGING Assets S3 Bucket Name")
-  DEFAULTS[:aws_key_staging] = inputs[:aws_key]
-  inputs[:aws_key_staging] = optionally(:aws_key_staging, "What is your STAGING AWS Public Key")
-  DEFAULTS[:aws_secret_staging] = inputs[:aws_secret]
-  inputs[:aws_secret_staging] = optionally(:aws_secret_staging, "What is your SECRET AWS Secret Key")
+if inputs[:create_stating_heroku_app]
+  DEFAULTS[:heroku_staging_app_name] = "#{inputs[:heroku_app_name]}-staging"
+  inputs[:heroku_staging_app_name] = optionally(:heroku_staging_app_name, "What do you want to name your STAGING HEROKU app")
+  if inputs[:enable_asset_pipeline]
+    DEFAULTS[:s3_staging_assets_bucket] = "#{inputs[:heroku_staging_app_name]}-assets"
+    inputs[:s3_staging_assets_bucket] = optionally(:s3_staging_assets_bucket, "What is your STAGING Assets S3 Bucket Name")
+    DEFAULTS[:aws_key_staging] = inputs[:aws_key]
+    inputs[:aws_key_staging] = optionally(:aws_key_staging, "What is your STAGING AWS Public Key")
+    DEFAULTS[:aws_secret_staging] = inputs[:aws_secret]
+    inputs[:aws_secret_staging] = optionally(:aws_secret_staging, "What is your SECRET AWS Secret Key")
+  end
 end
 
 inputs[:collaborators] = optionally(:collaborators, "Collaborator email addresses space delimited").split(' ')
