@@ -81,7 +81,7 @@ end
 
 # Staging Environment Settings
 inputs[:create_staging_heroku_app] = true_string? optionally(:create_staging_heroku_app, "Make a staging environment and heroku app as well?")
-if inputs[:create_stating_heroku_app]
+if inputs[:create_staging_heroku_app]
   DEFAULTS[:heroku_staging_app_name] = "#{inputs[:heroku_app_name]}-staging"
   inputs[:heroku_staging_app_name] = optionally(:heroku_staging_app_name, "What do you want to name your STAGING HEROKU app")
   if inputs[:enable_asset_pipeline]
